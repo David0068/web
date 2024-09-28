@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortune Teller</title>
+</head>
+<body>
+    <form method="post">
+        <label for="name">Name:</label>
+        <input type="text" name="name" id="name" required>
+        
+        <label for="gender">Gender:</label>
+        <select name="gender" id="gender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+        </select>
+        
+        <label for="phone_number">Phone Number:</label>
+        <input type="text" name="phone_number" id="phone_number" pattern="^09\d{8}$" required>
+        <span id="phone_error" style="color: red; display: none;">Invalid phone number format. Please enter a valid number starting with 09 followed by 8 digits.</span>
+        
+        <button type="submit">Get My Fortune</button>
+    </form>
+
+    <script>
+        document.getElementById('phone_number').addEventListener('input', function() {
+            var phoneNumber = this.value;
+            var pattern = /^09\d{8}$/;
+            if (!pattern.test(phoneNumber)) {
+                document.getElementById('phone_error').style.display = 'inline';
+            } else {
+                document.getElementById('phone_error').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
