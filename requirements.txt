@@ -100,8 +100,6 @@ pyserial==3.5
 python-dateutil==2.9.0.post0
 pytweening==1.2.0
 pytz==2024.2
-pywin32==306
-pywin32-ctypes==0.2.2
 pywinauto==0.6.8
 PyYAML==6.0.1
 reedsolo==1.7.0
