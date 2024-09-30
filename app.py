@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request
+from flask_sqlalchemy import SQLAlchemy
 import pandas as pd
 import hashlib
 import logging
@@ -11,9 +12,26 @@ app = Flask(__name__)
 # 配置日志记录
 logging.basicConfig(level=logging.DEBUG)
 
+# 配置数据库连接
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://mobilenumber_user:XEFhJvAdxq5AWTOQ60wDfWF5TmIeWClR@dpg-crt6lht6l47c73d7g0l0-a/mobilenumber'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 初始化数据库对象
+db = SQLAlchemy(app)
+
+# 创建用户信息的数据库模型
+class UserInfo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    gender = db.Column(db.String(10), nullable=False)
+    phone_number = db.Column(db.String(20), unique=True, nullable=False)
+
+# 创建数据库表
+with app.app_context():
+    db.create_all()
+
 # 获取文件路径，使用跨平台的方法
 fortunes_file_path = os.path.join(os.path.dirname(__file__), 'fortunes.xlsx')
-user_info_file_path = os.path.join(os.path.dirname(__file__), 'user_info.csv')
 
 # 读取运势列表
 try:
@@ -42,13 +60,19 @@ def get_fortune(name, phone_number):
     index = int(hash_value, 16) % len(fortunes)
     return fortunes[index]
 
-# 保存用户信息
+# 保存用户信息到数据库
 def save_user_info(name, gender, phone_number):
-    df = pd.DataFrame([[name, gender, phone_number]], columns=['姓名', '性别', '手机号码'])
     try:
-        # 使用 utf-8-sig 编码保存，确保 Excel 能正确显示中文
-        df.to_csv(user_info_file_path, mode='a', header=not os.path.exists(user_info_file_path), index=False, encoding='utf-8-sig')
-        app.logger.debug("User info saved successfully to user_info.csv")
+        # 检查数据库中是否已经存在此号码
+        existing_user = UserInfo.query.filter_by(phone_number=phone_number).first()
+        if not existing_user:
+            # 如果用户不存在，则添加新用户
+            user = UserInfo(name=name, gender=gender, phone_number=phone_number)
+            db.session.add(user)
+            db.session.commit()
+            app.logger.debug("User info saved successfully to the database")
+        else:
+            app.logger.debug("User with this phone number already exists in the database")
     except Exception as e:
         app.logger.error(f"Error saving user info: {e}")
 
@@ -74,7 +98,7 @@ def index():
             fortune = get_fortune(name, phone_number)
             app.logger.debug(f"Calculated fortune: {fortune}")
 
-            # 保存用户信息
+            # 保存用户信息到数据库
             save_user_info(name, gender, phone_number)
 
             return render_template('result.html', name=name, fortune=fortune)
