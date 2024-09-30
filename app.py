@@ -3,7 +3,7 @@ import pandas as pd
 import hashlib
 import logging
 import re
-
+import os
 
 # 创建 Flask 应用
 app = Flask(__name__)
@@ -11,14 +11,19 @@ app = Flask(__name__)
 # 配置日志记录
 logging.basicConfig(level=logging.DEBUG)
 
+# 获取文件路径，使用跨平台的方法
+fortunes_file_path = os.path.join(os.path.dirname(__file__), 'fortunes.xlsx')
+user_info_file_path = os.path.join(os.path.dirname(__file__), 'user_info.csv')
+
 # 读取运势列表
 try:
-    fortunes = pd.read_excel('fortunes.xlsx', engine='openpyxl')['运势'].tolist()
+    fortunes = pd.read_excel(fortunes_file_path, engine='openpyxl')['运势'].tolist()
     app.logger.debug("Successfully loaded fortunes from fortunes.xlsx")
 except FileNotFoundError:
     app.logger.error("Error: fortunes.xlsx file not found. Please ensure the file is in the correct location.")
     fortunes = []
 
+# 验证手机号码格式
 def is_valid_phone_number(phone_number):
     pattern = r'^09\d{8}$'
     return re.match(pattern, phone_number) is not None
@@ -32,7 +37,7 @@ def get_hash(name, phone_number):
 def get_fortune(name, phone_number):
     if not fortunes:
         return "Fortunes data is unavailable."
-    
+
     hash_value = get_hash(name, phone_number)
     index = int(hash_value, 16) % len(fortunes)
     return fortunes[index]
@@ -42,12 +47,10 @@ def save_user_info(name, gender, phone_number):
     df = pd.DataFrame([[name, gender, phone_number]], columns=['姓名', '性别', '手机号码'])
     try:
         # 使用 utf-8-sig 编码保存，确保 Excel 能正确显示中文
-        df.to_csv('user_info.csv', mode='a', header=False, index=False, encoding='utf-8-sig')
+        df.to_csv(user_info_file_path, mode='a', header=not os.path.exists(user_info_file_path), index=False, encoding='utf-8-sig')
         app.logger.debug("User info saved successfully to user_info.csv")
     except Exception as e:
         app.logger.error(f"Error saving user info: {e}")
-
-
 
 # 定义路由和视图函数
 @app.route('/', methods=['GET', 'POST'])
@@ -82,8 +85,6 @@ def index():
     # 如果是 GET 请求，渲染表单页面
     return render_template('index.html')
 
-
 # 启动应用程序
 if __name__ == '__main__':
-        app.run(debug=True, port=8050)
-
+    app.run(debug=True, host='0.0.0.0', port=8050)
